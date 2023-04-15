@@ -1,47 +1,21 @@
-import pdf from 'pdf-parse';
-import fs from 'fs';
+import AWS from 'aws-sdk';
 
-export const handler = async (event) => {
-    const response = {
-        statusCode: 200,
-        body: "",
-    };
+export const handler = async (event, context) => {
+  const sns = new AWS.SNS();
 
-    let pdfBuffer = await fs.promises.readFile('./pdfTask2.pdf');
+  const message = {
+    data:"sample message from sendMessageSNS"
+  };
 
-    let result = await pdf(pdfBuffer);
-    result = result.text.split('\n');
+  const params = {
+    Message: JSON.stringify(message),
+    TopicArn: 'arn:aws:sns:ap-south-1:777175687872:firstMessageTopic'
+  };
 
-
-    let invoiceNumber = "";
-    let invoiceDate = "";
-    let tableContent = "";
-    let indexSubtotal = 0;
-
-
-    for (let i = 0; i < result.length; i++) {
-        let currentRow = result[i];
-        if (currentRow.toLowerCase().startsWith('invoice#')) {
-            invoiceNumber = currentRow.substring(9);
-        }
-        else if (currentRow.toLowerCase().startsWith('date')) {
-            invoiceDate = currentRow.substring(6);
-        }
-        else if (currentRow.toLowerCase().startsWith('subtotal')) {
-            indexSubtotal = i;
-        }
-        else if (currentRow.toLowerCase().startsWith('quantitydescription')) {
-            tableContent = result[i + 1];
-        }
-    }
-    let subtotal = result[indexSubtotal + 4];
-    let salestax = result[indexSubtotal + 5];
-    let shippingAndHnadling = result[indexSubtotal + 5];
-    let totalDue = result[indexSubtotal + 6];
-
-
-    let data = { invoiceNumber, invoiceDate, tableContent, subtotal, salestax, shippingAndHnadling, totalDue }
-
-    response.body = data ;
-    return response;
+  try {
+    const result = await sns.publish(params).promise();
+    console.log('SNS message published:', result.MessageId);
+  } catch (error) {
+    console.error('Error publishing SNS message:', error);
+  }
 };
